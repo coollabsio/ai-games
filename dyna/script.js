@@ -27,7 +27,7 @@ window.onload = function () {
   twitterLink.target = '_blank';
 
   const githubLink = document.createElement('a');
-  githubLink.href = 'https://github.com/heyandras/bomberman';
+  githubLink.href = 'https://github.com/coollabsio/ai-games/tree/main/dyna';
   githubLink.textContent = 'GitHub';
   githubLink.style.color = '#ffffff';
   githubLink.style.textDecoration = 'none';
@@ -51,7 +51,8 @@ window.onload = function () {
   document.body.appendChild(footer);
 
   // Debug mode using localStorage
-  const DEBUG = localStorage.getItem('DEBUG') === 'true';
+  // const DEBUG = localStorage.getItem('DEBUG') === 'true';
+  const DEBUG = false;
 
   function debugLog(...args) {
     if (DEBUG) {
@@ -69,15 +70,17 @@ window.onload = function () {
   const MAX_EXPLOSION_SIZE = 10;
   const BOMB_TIMER = 2000; // 2 seconds
   const EXPLOSION_DURATION = 500; // 0.5 seconds
+  const BLOCK_DESTROY_COOLDOWN = 510; // 510ms cooldown before destroyed blocks become passable
   const EXPLOSION_SIZE = 1; // Number of tiles in each direction
   const PADDING = 60; // Padding around the game area
-  const POWERUP_DROP_CHANCE = 0.2; // 10% chance to drop a power-up
+  const POWERUP_DROP_CHANCE = 0.2; // 20% chance to drop a power-up
+  const DESTROYABLE_BLOCK_CHANCE = 0.4; // 40% chance for a tile to be a destroyable block
   const PLAYER_MAX_HEALTH = 1;
-  const GAME_OVER_DURATION = 4000; // 4 seconds for game over screen
+  const GAME_OVER_DURATION = 3000; // 3 seconds for game over screen
   const ENEMY_SPEED = 2; // pixels per frame
   const ENEMY_SIZE = TILE_SIZE - 20; // Slightly smaller than player
-  const ENEMY_MOVE_INTERVAL = 500; // Change direction every 1 second
-  const NUM_ENEMIES = 5; // Number of enemies in the game
+  const ENEMY_MOVE_INTERVAL = 1000; // Change direction every 1 second
+  const NUM_ENEMIES = 10; // Number of enemies in the game
   const MIN_DISTANCE_FROM_PLAYER = 5;
 
   // Create stats canvas
@@ -86,11 +89,22 @@ window.onload = function () {
   statsCanvas.style.top = '10px';
   statsCanvas.style.right = '10px';
   statsCanvas.style.background = 'rgba(0, 0, 0, 0.85)';
-  statsCanvas.style.border = '2px solid rgba(255, 255, 255, 0.3)';
-  statsCanvas.style.borderRadius = '5px';
-  statsCanvas.width = 200;
-  statsCanvas.height = 290;
+  statsCanvas.style.border = 'none';
+  statsCanvas.width = 240;
+  statsCanvas.height = 400;
   const statsCtx = statsCanvas.getContext('2d');
+
+  // Create timer canvas
+  const timerCanvas = document.createElement('canvas');
+  timerCanvas.style.position = 'fixed';
+  timerCanvas.style.top = '10px';
+  timerCanvas.style.left = '50%';
+  timerCanvas.style.transform = 'translateX(-50%)';
+  timerCanvas.style.background = 'rgba(0, 0, 0, 0.85)';
+  timerCanvas.style.border = 'none';
+  timerCanvas.width = 150;
+  timerCanvas.height = 50;
+  const timerCtx = timerCanvas.getContext('2d');
 
   // Power-ups
   let powerUps = [];
@@ -147,6 +161,7 @@ window.onload = function () {
   let explosions = [];
   let gameOverTime = 0;
   let isGameOver = false;
+  let recentlyDestroyedBlocks = []; // Track recently destroyed blocks
 
   // Player state
   const player = {
@@ -167,6 +182,7 @@ window.onload = function () {
     // Reset game state
     isGameOver = false;
     gameOverTime = 0;
+    gameStartTime = performance.now(); // Set the game start time
 
     // Reset player stats
     playerStats.maxBombs = 1;
@@ -285,15 +301,17 @@ window.onload = function () {
     // Draw stats with improved contrast
     statsCtx.fillStyle = '#ffffff';
     statsCtx.font = 'bold 16px Arial';
-    statsCtx.fillText(`Health: ${playerStats.health}/${PLAYER_MAX_HEALTH}`, 10, 25);
-    statsCtx.fillText(`Bombs: ${playerStats.maxBombs - playerStats.currentBombs}/${playerStats.maxBombs}`, 10, 45);
-    statsCtx.fillText(`Explosion Size: ${playerStats.explosionSize}`, 10, 65);
-    statsCtx.fillText(`Speed: ${(playerStats.speed / BASE_PLAYER_SPEED).toFixed(1)}x`, 10, 85);
+
+    statsCtx.fillText(`Enemies Left: ${enemies.length}`, 10, 25);
+    statsCtx.fillText(`Health: ${playerStats.health}/${PLAYER_MAX_HEALTH}`, 10, 45);
+    statsCtx.fillText(`Bombs: ${playerStats.maxBombs - playerStats.currentBombs}/${playerStats.maxBombs}`, 10, 65);
+    statsCtx.fillText(`Explosion Size: ${playerStats.explosionSize}`, 10, 85);
+    statsCtx.fillText(`Speed: ${(playerStats.speed / BASE_PLAYER_SPEED).toFixed(1)}x`, 10, 105);
 
     // Draw legend title with improved visibility
     statsCtx.fillStyle = '#ffffff';
     statsCtx.font = 'bold 16px Arial';
-    statsCtx.fillText('Power-ups:', 10, 115);
+    statsCtx.fillText('Power-ups:', 10, 125);
 
     // Helper function to draw power-up icon with improved visibility
     function drawPowerUpIcon(type, x, y, size) {
@@ -363,7 +381,7 @@ window.onload = function () {
     const iconSize = 30;
     const iconX = 20;
     let currentY = 130;
-    const spacing = 25;
+    const spacing = 5;
 
     // Speed power-up
     drawPowerUpIcon(POWERUP_TYPES.SPEED, iconX, currentY, iconSize);
@@ -381,7 +399,21 @@ window.onload = function () {
     // Bomb power-up
     drawPowerUpIcon(POWERUP_TYPES.BOMB, iconX, currentY, iconSize);
     statsCtx.fillStyle = '#ffffff';
-    statsCtx.fillText('Max Bombs +1', iconX + iconSize + 10, currentY + iconSize / 2 + 5);
+    statsCtx.fillText('Max Bombs +1', iconX + iconSize + 10, currentY + iconSize / 2 + 8);
+
+    currentY += iconSize + spacing + 20;
+    statsCtx.font = 'bold 16px Arial';
+    statsCtx.fillText(`Controls:`, 10, currentY);
+
+    statsCtx.font = '14px Arial';
+    currentY += 25;
+    statsCtx.fillText('Up/Down/Left/Right - Move', 30, currentY);
+
+    currentY += 25;
+    statsCtx.fillText('W/A/S/D - Move', 30, currentY);
+
+    currentY += 25;
+    statsCtx.fillText('SPACE - Place Bomb', 30, currentY);
   }
 
   // Menu state
@@ -400,7 +432,7 @@ window.onload = function () {
     ctx.fillStyle = 'white';
     ctx.font = 'bold 48px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('BOMBERMAN', canvas.width / 2, canvas.height / 3);
+    ctx.fillText('Dyna Blaster', canvas.width / 2, canvas.height / 3);
 
     // Draw menu options
     ctx.font = '24px Arial';
@@ -471,6 +503,12 @@ window.onload = function () {
           }
           break;
       }
+      return;
+    }
+
+    if (currentGameState === GAME_STATES.GAME_OVER && e.key.toLowerCase() === 'r') {
+      currentGameState = GAME_STATES.PLAYING;
+      resetGame();
       return;
     }
 
@@ -825,6 +863,14 @@ window.onload = function () {
     if (gameGrid[y][x] === 2 || gameGrid[y][x] === 3) {
       // Store if it was a special block before clearing
       const wasSpecialBlock = (gameGrid[y][x] === 3);
+
+      // Add to recently destroyed blocks list
+      recentlyDestroyedBlocks.push({
+        x: x,
+        y: y,
+        destroyedAt: performance.now()
+      });
+
       // Clear the block
       gameGrid[y][x] = 0;
 
@@ -865,12 +911,23 @@ window.onload = function () {
   function drawBombsAndExplosions() {
     // Draw bombs
     bombs.forEach(bomb => {
+      // Draw bomb body
       ctx.fillStyle = '#000000';
       const x = bomb.gridX * TILE_SIZE + TILE_SIZE / 2 + offsetX;
       const y = bomb.gridY * TILE_SIZE + TILE_SIZE / 2 + offsetY;
       ctx.beginPath();
       ctx.arc(x, y, TILE_SIZE / 3, 0, Math.PI * 2);
       ctx.fill();
+
+      // Draw countdown timer
+      const timeLeft = Math.ceil((bomb.timer - (performance.now() - bomb.planted)) / 1000);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 14px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(timeLeft.toString(), x, y);
+      ctx.textAlign = 'left'; // Reset text alignment
+      ctx.textBaseline = 'alphabetic'; // Reset text baseline
     });
 
     // Draw explosions only on empty spaces
@@ -896,7 +953,7 @@ window.onload = function () {
           gameGrid[y][x] = 1; // Border walls (indestructible)
         } else if (x % 2 === 0 && y % 2 === 0) {
           gameGrid[y][x] = 1; // Indestructible walls
-        } else if (Math.random() < 0.7 && !(x === 1 && y === 1)) {
+        } else if (Math.random() < DESTROYABLE_BLOCK_CHANCE && !(x === 1 && y === 1)) {
           if (Math.random() < POWERUP_DROP_CHANCE) { // Use POWERUP_DROP_CHANCE for special blocks
             gameGrid[y][x] = 3; // Special block
           } else {
@@ -978,13 +1035,21 @@ window.onload = function () {
     ];
 
     let canMove = true;
+    const currentTime = performance.now();
 
-    // Check collisions with walls and blocks
+    // Check collisions with walls, blocks, and recently destroyed blocks
     for (const point of checkPoints) {
       const checkX = Math.floor((point.x - offsetX) / TILE_SIZE);
       const checkY = Math.floor((point.y - offsetY) / TILE_SIZE);
-      if (gameGrid[checkY]?.[checkX] > 0) {
-        debugLog('Wall collision at:', checkX, checkY);
+
+      // Check for recently destroyed blocks
+      const recentlyDestroyed = recentlyDestroyedBlocks.find(
+        block => block.x === checkX && block.y === checkY &&
+          currentTime - block.destroyedAt < BLOCK_DESTROY_COOLDOWN
+      );
+
+      if (gameGrid[checkY]?.[checkX] > 0 || recentlyDestroyed) {
+        debugLog('Collision at:', checkX, checkY, recentlyDestroyed ? '(recently destroyed)' : '');
         canMove = false;
         break;
       }
@@ -1042,6 +1107,7 @@ window.onload = function () {
 
     ctx.font = '24px Arial';
     ctx.fillText(`Returning to menu in ${timeLeft}...`, canvas.width / 2, canvas.height / 2 + 40);
+    ctx.fillText('Press R to restart', canvas.width / 2, canvas.height / 2 + 80);
   }
 
   function createEnemy(x, y) {
@@ -1079,7 +1145,7 @@ window.onload = function () {
           { dx: 0, dy: 0 }    // stay still
         ];
 
-        // Check which directions are available (not blocked by walls or bombs)
+        // Check which directions are available (not blocked by walls, bombs, or recently destroyed blocks)
         const availableDirections = directions.filter(dir => {
           const checkX = Math.floor((enemy.x - offsetX) / TILE_SIZE) + dir.dx;
           const checkY = Math.floor((enemy.y - offsetY) / TILE_SIZE) + dir.dy;
@@ -1094,7 +1160,13 @@ window.onload = function () {
             return false;
           }
 
-          return gameGrid[checkY][checkX] === 0;
+          // Check for recently destroyed blocks
+          const recentlyDestroyed = recentlyDestroyedBlocks.find(
+            block => block.x === checkX && block.y === checkY &&
+              currentTime - block.destroyedAt < BLOCK_DESTROY_COOLDOWN
+          );
+
+          return gameGrid[checkY][checkX] === 0 && !recentlyDestroyed;
         });
 
         // If there are available directions, choose one randomly
@@ -1111,7 +1183,7 @@ window.onload = function () {
       let newX = enemy.x + enemy.direction.dx * ENEMY_SPEED;
       let newY = enemy.y + enemy.direction.dy * ENEMY_SPEED;
 
-      // Check collision with walls and bombs
+      // Check collision with walls, bombs, and recently destroyed blocks
       const radius = enemy.size / 2;
       const checkPoints = [
         { x: newX - radius, y: newY - radius }, // Top-left
@@ -1122,11 +1194,18 @@ window.onload = function () {
 
       let canMove = true;
 
-      // Check wall collisions
+      // Check wall and recently destroyed block collisions
       for (const point of checkPoints) {
         const checkX = Math.floor((point.x - offsetX) / TILE_SIZE);
         const checkY = Math.floor((point.y - offsetY) / TILE_SIZE);
-        if (gameGrid[checkY]?.[checkX] > 0) {
+
+        // Check for recently destroyed blocks
+        const recentlyDestroyed = recentlyDestroyedBlocks.find(
+          block => block.x === checkX && block.y === checkY &&
+            currentTime - block.destroyedAt < BLOCK_DESTROY_COOLDOWN
+        );
+
+        if (gameGrid[checkY]?.[checkX] > 0 || recentlyDestroyed) {
           canMove = false;
           break;
         }
@@ -1145,7 +1224,7 @@ window.onload = function () {
         enemy.x = newX;
         enemy.y = newY;
       } else {
-        // If we hit a wall or bomb, force direction change next update
+        // If we hit a wall, bomb, or recently destroyed block, force direction change next update
         enemy.lastDirectionChange = 0;
       }
 
@@ -1187,6 +1266,7 @@ window.onload = function () {
 
   let currentGameState = GAME_STATES.MENU;
   let selectedMode = null;
+  let gameStartTime = 0; // Track when the game started
   const GAME_MODES = {
     SINGLE_PLAYER: 'single_player',
     MULTIPLAYER: 'multiplayer'
@@ -1207,6 +1287,29 @@ window.onload = function () {
     ctx.fillText('Press SPACE to play again', canvas.width / 2, canvas.height / 2 + 80);
   }
 
+  function drawTimer() {
+    if (currentGameState !== GAME_STATES.PLAYING) return;
+
+    timerCtx.clearRect(0, 0, timerCanvas.width, timerCanvas.height);
+
+    // Draw background
+    timerCtx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+    timerCtx.fillRect(0, 0, timerCanvas.width, timerCanvas.height);
+
+    // Calculate and format game time
+    const gameTime = Math.floor((performance.now() - gameStartTime) / 1000);
+    const minutes = Math.floor(gameTime / 60);
+    const seconds = gameTime % 60;
+    const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+    // Draw timer with larger font
+    timerCtx.fillStyle = '#ffffff';
+    timerCtx.font = 'bold 28px Arial';
+    timerCtx.textAlign = 'center';
+    timerCtx.textBaseline = 'middle';
+    timerCtx.fillText(timeString, timerCanvas.width / 2, timerCanvas.height / 2);
+  }
+
   // Modify gameLoop to handle different states
   function gameLoop(currentTime) {
     // Calculate FPS
@@ -1218,16 +1321,32 @@ window.onload = function () {
       debugLog('Frame:', frameCount);
     }
 
+    // Clear expired recently destroyed blocks
+    recentlyDestroyedBlocks = recentlyDestroyedBlocks.filter(
+      block => currentTime - block.destroyedAt < BLOCK_DESTROY_COOLDOWN
+    );
+
     // Clear the canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     switch (currentGameState) {
       case GAME_STATES.MENU:
+        if (document.body.contains(statsCanvas)) {
+          document.body.removeChild(statsCanvas);
+        }
+        if (document.body.contains(timerCanvas)) {
+          document.body.removeChild(timerCanvas);
+        }
         drawMainMenu();
         break;
 
       case GAME_STATES.PLAYING:
-        document.body.appendChild(statsCanvas);
+        if (!document.body.contains(statsCanvas)) {
+          document.body.appendChild(statsCanvas);
+        }
+        if (!document.body.contains(timerCanvas)) {
+          document.body.appendChild(timerCanvas);
+        }
 
         // Update game state
         updatePlayer();
@@ -1254,6 +1373,7 @@ window.onload = function () {
         drawEnemies();
         drawPlayer();
         drawStats();
+        drawTimer();
         break;
 
       case GAME_STATES.GAME_OVER:
@@ -1264,6 +1384,7 @@ window.onload = function () {
         drawEnemies();
         drawPlayer();
         drawStats();
+        drawTimer();
         drawGameOver();
 
         // Check if game over timer is complete
@@ -1280,6 +1401,7 @@ window.onload = function () {
         drawBombsAndExplosions();
         drawPlayer();
         drawStats();
+        drawTimer();
         drawWinScreen();
         break;
     }
