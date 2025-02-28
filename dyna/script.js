@@ -52,7 +52,7 @@ window.onload = function () {
 
   // Debug mode using localStorage
   // const DEBUG = localStorage.getItem('DEBUG') === 'true';
-  const DEBUG = true;
+  const DEBUG = false;
 
   function debugLog(...args) {
     if (DEBUG) {
