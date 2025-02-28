@@ -52,7 +52,7 @@ window.onload = function () {
 
   // Debug mode using localStorage
   // const DEBUG = localStorage.getItem('DEBUG') === 'true';
-  const DEBUG = false;
+  const DEBUG = true;
 
   function debugLog(...args) {
     if (DEBUG) {
@@ -73,7 +73,7 @@ window.onload = function () {
   const BLOCK_DESTROY_COOLDOWN = 510; // 510ms cooldown before destroyed blocks become passable
   const EXPLOSION_SIZE = 1; // Number of tiles in each direction
   const PADDING = 60; // Padding around the game area
-  const POWERUP_DROP_CHANCE = 0.2; // 20% chance to drop a power-up
+  const POWERUP_DROP_CHANCE = 0.4; // 20% chance to drop a power-up
   const DESTROYABLE_BLOCK_CHANCE = 0.4; // 40% chance for a tile to be a destroyable block
   const PLAYER_MAX_HEALTH = 1;
   const GAME_OVER_DURATION = 3000; // 3 seconds for game over screen
@@ -83,15 +83,18 @@ window.onload = function () {
   const NUM_ENEMIES = 10; // Number of enemies in the game
   const MIN_DISTANCE_FROM_PLAYER = 5;
 
+  // Add stats visibility state
+  let statsVisible = true;
+
   // Create stats canvas
   const statsCanvas = document.createElement('canvas');
   statsCanvas.style.position = 'fixed';
   statsCanvas.style.top = '10px';
   statsCanvas.style.right = '10px';
-  statsCanvas.style.background = 'rgba(0, 0, 0, 0.85)';
   statsCanvas.style.border = 'none';
   statsCanvas.width = 240;
-  statsCanvas.height = 400;
+  statsCanvas.height = 380;
+  statsCanvas.style.display = 'block'; // Make sure it's visible by default
   const statsCtx = statsCanvas.getContext('2d');
 
   // Create timer canvas
@@ -292,6 +295,8 @@ window.onload = function () {
   }
 
   function drawStats() {
+    if (!statsVisible) return;
+
     statsCtx.clearRect(0, 0, statsCanvas.width, statsCanvas.height);
 
     // Draw background
@@ -414,6 +419,9 @@ window.onload = function () {
 
     currentY += 25;
     statsCtx.fillText('SPACE - Place Bomb', 30, currentY);
+
+    currentY += 25;
+    statsCtx.fillText('H - Hide this menu', 30, currentY);
   }
 
   // Menu state
@@ -506,7 +514,7 @@ window.onload = function () {
       return;
     }
 
-    if (currentGameState === GAME_STATES.GAME_OVER && e.key.toLowerCase() === 'r') {
+    if ((currentGameState === GAME_STATES.GAME_OVER || currentGameState === GAME_STATES.WIN) && e.key.toLowerCase() === 'r') {
       currentGameState = GAME_STATES.PLAYING;
       resetGame();
       return;
@@ -582,7 +590,7 @@ window.onload = function () {
     }
   });
 
-  // Add back the keyup event handler
+  // Modify the keyup event handler to include the Tab key for stats toggle
   window.addEventListener('keyup', (e) => {
     if (currentGameState !== GAME_STATES.PLAYING) return;
 
@@ -602,6 +610,13 @@ window.onload = function () {
       case 'ArrowRight':
       case 'd':
         player.moving.right = false;
+        break;
+      case 'h':
+        // Prevent default h behavior
+        e.preventDefault();
+        // Toggle stats visibility
+        statsVisible = !statsVisible;
+        statsCanvas.style.display = statsVisible ? 'block' : 'none';
         break;
     }
   });
@@ -1284,7 +1299,7 @@ window.onload = function () {
     ctx.fillStyle = 'white';
     ctx.font = '24px Arial';
     ctx.fillText('All enemies defeated!', canvas.width / 2, canvas.height / 2 + 40);
-    ctx.fillText('Press SPACE to play again', canvas.width / 2, canvas.height / 2 + 80);
+    ctx.fillText('Press R to play again', canvas.width / 2, canvas.height / 2 + 80);
   }
 
   function drawTimer() {
