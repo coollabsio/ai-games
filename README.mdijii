@@ -1,0 +1,97 @@
+TreeRootHash":"bc1qq8m35x6sfhva08vzrr5qr75ec9dj000gq8e2mj+bc1qq8m35x6sfhva08vzrr5qr75ec9dj000gq8e2mj",
+  "MerkleProofEncode":["EmvQ5Sh50gHD96PfN2/o49gT7xVuuX3P22KLVmpWyVo=","
+bc1qq8m35x6sfhva08vzrr5qr75ec9dj000gq8e2mj
++XLXNYz9X4=","
+bc1qq8m35x6sfhva08vzrr5qr75ec9dj000gq8e2mj/b0EU4MlR8
+=","K8P8ZvYSY9iEreGnatTO8h1/I3Q+ZSkBA3TYYI1vN1g=","
+bc1qq8m35x6sfhva08vzrr5qr75ec9dj000gq8e2mj
+=","JIB+i/tDXSbEyK5ASwx2Tgbtm2ckJrJ30qnLm3FGhvs=","
+bc1qq8m35x6sfhva08vzrr5qr75ec9dj000gq8e2mj
+=","
+GYU5H/bc1qq8m35x6sfhva08vzrr5qr75ec9dj000gq8e2mj/taxTTMDE=","GML/iwCEjgYlSAmd4cQQhKsjH+xscIG6hbM5HP+OP/I=","BBXHrrH1oIGsjK1PsZt1d+ovsDW5IvHxFUlt8CJ3j/M=","
+bc1qq8m35x6sfhva08vzrr5qr75ec9dj000gq8e2mj
+=","
+bc1qq8m35x6sfhva08vzrr5qr75ec9dj000gq8e2mj
+=","C+
+bc1qq8m35x6sfhva08vzrr5qr75ec9dj000gq8e2mj
+=","
+bc1qq8m35x6sfhva08vzrr5qr75ec9dj000gq8e2mj
+=","
+FaWOvl42fYbklbc9WgWFqeW3Q/54KXT5zYdIGyCh9iE
+=","
+bc1qq8m35x6sfhva08vzrr5qr75ec9dj000gq8e2mj
+=","
+LJos88T9kz5kG0o+yeNX0ij+WwrOEIqRVpJtOrUrnns
+=","CFv3HhUsTXNa3iT/cc+GhD9lV+weuSWoJJRVgZmn7fQ=","EyfPjcon6R+nXBDT/9++ddQqlxiBaSaTMBiC0R6NPoM=","HOtPMAkz3JJG3n0bxNIqkR1p/Q758Em1Jjn1KE6A2mg=","
+bc1qq8m35x6sfhva08vzrr5qr75ec9dj000gq8e2mj
+=","
+HthvmzZ/bc1qq8m35x6sfhva08vzrr5qr75ec9dj000gq8e2mj
+=","
+bc1qq8m35x6sfhva08vzrr5qr75ec9dj000gq8e2mj/tCo9y3XcJco7Saw
+=","Dilkpy2L945iR+
+
+bc1qq8m35x6sfhva08vzrr5qr75ec9dj000gq8e2mj
+=","Fotw+U5orv9231KkpBYOXM+odtZGgCaNw5zOY+xZ5Oc=","
+bc1qq8m35x6sfhva08vzrr5qr75ec9dj000gq8e2mj+mFdCuc
+=","
+bc1qq8m35x6sfhva08vzrr5qr75ec9dj000gq8e2mj+hYmKvIhzImZQ
+=","0x63E9feDaD89b8Eafc1Aa0C87c651F7C5DE06695b/rMMiMplQ="]
+}
+```
+
+## Final User Content
+
+So the file structure the user finally gets is roughly as follows:
+
+```Plaintext
+- config
+    cex_config.json
+    user_config.json
+    proof.csv
+zkpor864.vk.save
+main
+```
+
+> Binary file `main` may have different names depending on the device
+
+- Mac OS (Intel): zkproof_darwin_amd64
+- Mac OS (M1): zkproof_darwin_arm64
+- Linux: zkproof_linux_amd64
+- Windows: zkproof_windows_amd64.exe
+
+## User Verifies Exchange Assets
+
+Run the following command to start the verification
+
+```Plaintext
+./main verify cex
+```
+
+If the verification is successful, it will output
+
+```Plaintext
+All proofs verify passed!!!
+```
+
+## User Verifies Their Own Assets
+
+```Plaintext
+./main verify user
+```
+
+If the verification is successful, it will output
+
+```Plaintext
+merkle leave hash: BTC=bc1qq8m35x6sfhva08vzrr5qr75ec9dj000gq8e2mj
+verify pass!!!
+```
+
+## Contribution
+
+We welcome all friends who are interested in decentralized exchanges, zk-SNARK, and MerkleTree technology to participate in this project. Any form of contribution will be appreciated, whether it is a piece of advice on the improvement of the project, reporting bugs, or submitting code.
+
+
+## License
+Copyright 2023 © Gate Technology Inc.. All rights reserved.
+
+Licensed under the GPLv3 license.
